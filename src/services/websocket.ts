@@ -1,9 +1,11 @@
-
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 const MAX_RECONNECT_DELAY = 5000;
 const INITIAL_RECONNECT_DELAY = 1000;
 let reconnectDelay = INITIAL_RECONNECT_DELAY;
+
+// Default WebSocket URL from environment variables
+const DEFAULT_WS_URL = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:3001/ws';
 
 type MessageHandler = (event: MessageEvent) => void;
 type StatusHandler = (isConnected: boolean) => void;
@@ -11,7 +13,7 @@ type StatusHandler = (isConnected: boolean) => void;
 const messageHandlers: MessageHandler[] = [];
 const statusHandlers: StatusHandler[] = [];
 
-export function connectWebSocket(url: string): Promise<WebSocket> {
+export function connectWebSocket(url: string = DEFAULT_WS_URL): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     try {
       socket = new WebSocket(url);

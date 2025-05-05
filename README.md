@@ -1,73 +1,163 @@
-# Welcome to your Lovable project
+# IdeaSynergy
 
-## Project info
+A collaborative brainstorming application that transcribes spoken ideas, analyzes them for themes, and generates creative prompts to inspire further ideation—all powered by the Granite-3.3-8B-Instruct model via the Watson X API.
 
-**URL**: https://lovable.dev/projects/99d192b3-b578-4440-ac1a-6d919c70f37c
+![IdeaSynergy](https://via.placeholder.com/800x400?text=IdeaSynergy+Platform) <!-- Replace with an actual screenshot of your app -->
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- **Real-time Collaboration**: Join rooms to brainstorm with team members
+- **Speech-to-Text**: Record and transcribe your spoken ideas using Web Speech API
+- **AI-Powered Analysis**: Analyze ideas for key themes and patterns
+- **Creative Prompts**: Get AI-generated prompts to inspire further ideation
+- **Idea Management**: Comment on and build upon ideas
+- **Chat**: Communicate with room participants in real-time
 
-**Use Lovable**
+## Browser Compatibility
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/99d192b3-b578-4440-ac1a-6d919c70f37c) and start prompting.
+IdeaSynergy uses the Web Speech API for voice transcription, which is supported in:
+- Chrome/Edge (full support)
+- Safari (requires user permission)
+- Firefox (may have limited support)
 
-Changes made via Lovable will be committed automatically to this repo.
+For best results, use a Chromium-based browser (Chrome, Edge, Brave).
 
-**Use your preferred IDE**
+## Setup
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js 16+ or Bun
+- IBM Cloud account with API key for Granite API
 
-Follow these steps:
+### Installation
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. Clone the repository
+2. Install dependencies:
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+npm install
+# or
+bun install
 ```
 
-**Edit a file directly in GitHub**
+3. Create `.env` file in the root directory and add your IBM Cloud API key:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+# Server configuration
+PORT=3001
 
-**Use GitHub Codespaces**
+# IBM Cloud API credentials
+IBM_API_KEY=your_ibm_api_key_here
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# WebSocket URL for frontend to connect to
+VITE_WEBSOCKET_URL=ws://localhost:3001/ws
+```
 
-## What technologies are used for this project?
+### Running the Application
 
-This project is built with:
+#### Development Mode
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Start the frontend development server:
 
-## How can I deploy this project?
+```bash
+npm run dev
+# or
+bun run dev
+```
 
-Simply open [Lovable](https://lovable.dev/projects/99d192b3-b578-4440-ac1a-6d919c70f37c) and click on Share -> Publish.
+Start the backend server in a separate terminal:
 
-## Can I connect a custom domain to my Lovable project?
+```bash
+npm run build
+npm run dev:server
+# or
+bun run build
+bun run dev:server
+```
 
-Yes, you can!
+#### Production Mode
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Build the application:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+```bash
+npm run build
+# or
+bun run build
+```
+
+Start the server:
+
+```bash
+npm run server
+# or
+bun run server
+```
+
+## Usage
+
+1. Open the application in a **Chromium-based browser** (Chrome, Edge)
+2. Create a new room or join an existing one with a room code
+3. Click the microphone button to record your idea using Web Speech API
+4. Allow microphone permissions when prompted
+5. Your idea will be transcribed in the browser, analyzed by IBM Granite API, and displayed with themes and creative prompts
+6. Comment on ideas to build upon them
+7. Use the chat panel to communicate with other participants
+
+## Technology Stack
+
+- **Frontend**: React, TypeScript, Tailwind CSS, shadcn/ui, Web Speech API
+- **Backend**: Node.js, Express.js, WebSockets
+- **AI**: IBM Granite API (Granite-3.3-8B-Instruct model)
+
+## Future Roadmap
+
+### Notion Integration
+- **Two-way Sync**: Seamlessly sync ideation sessions to Notion databases for further organization
+- **Template Support**: Create customized Notion templates for different brainstorming methodologies
+- **Automated Documentation**: Auto-generate structured documentation from brainstorming sessions
+
+### Deep Research Capabilities
+- **Academic Paper Analysis**: Integrate with research databases to validate ideas against existing research
+- **Trend Analysis**: Connect with trend data sources to evaluate idea viability
+- **Competitive Analysis**: Automated research on similar ideas or products in the market
+- **Semantic Search**: Find connections between seemingly unrelated ideas across multiple sessions
+
+### Advanced Analytics
+- **Idea Evolution Tracking**: Visual representation of how ideas evolve over time
+- **Contribution Metrics**: Track team member participation and idea development
+- **Sentiment Analysis**: Gauge team enthusiasm for different concepts
+- **Implementation Forecasting**: AI-powered suggestions on resources needed for implementation
+
+### Enterprise Features
+- **SSO Integration**: Enterprise authentication with major identity providers
+- **Role-Based Access Control**: Granular permissions for different team members
+- **Custom AI Training**: Train the AI on company-specific terminology and knowledge
+- **Compliance Features**: Data retention policies and export capabilities
+
+### Mobile Applications
+- **Native Mobile Apps**: Dedicated iOS and Android applications for on-the-go ideation
+- **Offline Mode**: Continue brainstorming without internet connectivity
+- **Push Notifications**: Get alerted when teammates contribute to sessions
+
+## Contributing
+
+Contributions are welcome! Please check out our [contribution guidelines](CONTRIBUTING.md) before getting started.
+
+## Deployment
+
+IdeaSynergy can be deployed using Docker:
+
+```bash
+docker build -t ideasynergy .
+docker run -p 3001:3001 -e IBM_API_KEY=your_key_here ideasynergy
+```
+
+Cloud deployment instructions coming soon.
+
+## License
+
+MIT
+
+---
+
+Created by Bhavya Pratap Singh Tomar, Team Leviathan

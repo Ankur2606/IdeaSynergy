@@ -19,4 +19,28 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    outDir: 'dist',
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        server: path.resolve(__dirname, 'src/server/index.ts')
+      },
+      output: {
+        entryFileNames: (chunkInfo) => {
+          return chunkInfo.name === 'server' 
+            ? 'server/[name].js'
+            : 'assets/[name]-[hash].js';
+        },
+      },
+      external: [
+        'node:util', 'node:stream', 'node:buffer', 'node:http', 'node:https', 
+        'node:zlib', 'node:net', 'node:fs', 'node:path', 'node:url', 
+        'node:crypto', 'node:os', 'node:process', 'node:stream/web',
+        'http', 'https', 'path', 'fs', 'util', 'url', 'stream', 'zlib', 
+        'querystring', 'crypto', 'os', 'events', 'net', 'buffer', 'async_hooks', 
+        'worker_threads', 'string_decoder', 'ws'
+      ]
+    }
+  },
 }));

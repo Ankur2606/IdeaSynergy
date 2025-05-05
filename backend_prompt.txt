@@ -1,0 +1,158 @@
+Updated Backend Prompt for IdeaSynergy (Replit)
+
+Implement the end-to-end backend for IdeaSynergy, a web app that enhances brainstorming by transcribing spoken ideas, analyzing them for themes, and generating creative prompts—all powered by the Granite-3.3-8B-Instruct model via the IBM Granite API. This implementation uses Node.js, Express.js, and WebSocket on Replit, with Vosk for local transcription and an updated IBM Granite API integration based on a tested Node SDK implementation.
+
+Technical Architecture
+
+Server: Express.js for HTTP setup.
+Real-Time: 'ws' library for WebSocket connections.
+Transcription: Vosk for local, real-time speech-to-text.
+AI Processing: Granite-3.3-8B-Instruct via IBM Granite API for theme analysis and prompt generation.
+Data Store: In-memory Map for rooms and ideas.
+
+Dynamic Token Authentication
+
+Use the tested getToken() function for IBM Cloud IAM token authentication.
+Manages token expiration (60-minute lifecycle) and formats auth headers with the bearer token.
+
+Granite API Integration
+
+Integrate the ibm/granite-3-3-8b-instruct model with project ID: b7ca2505-b0d4-4c6b-8cf8-58ede2848f9f.
+Configure with parameters: temperature=0, max_tokens=2000.
+
+Response Parsing
+
+Use the tested parser to extract content from <think> and <response> tags in the API response.
+Employs regex to separate analysis and prompts, returning a structured data object for frontend use.
+
+WebSocket Handling
+
+Connection: Clients connect to ws://<backend-url>/ws.
+Message Types:
+"join_room": { type: "join_room", room_code: "ABC123" }
+- Add client to room's participant list.
+- Create room if it doesn't exist.
+- Broadcast updated participant count: { type: "room_update", participants: count }
+- Send existing ideas to the newly joined client.
+
+"send_audio": { type: "send_audio", audio_data: "<blob>" }
+- Transcribe audio with Vosk.
+- Fetch IAM token using getToken().
+- Process transcription with IBM Granite API.
+- Parse response to extract themes and prompts.
+- Store idea with structure: { id, transcription, themes: [...], prompts: [...], comments: [] }
+- Broadcast: { type: "idea_update", idea: { ... } }.
+
+"add_comment": { type: "add_comment", idea_id: "123", comment: "Great idea!", author: "username" }
+- Update idea's comments and broadcast updated idea to all room participants.
+
+"chat_message": { type: "chat_message", room_code: "ABC123", message: "Hello everyone!", sender: "username" }
+- Broadcast chat message to all room participants with timestamp.
+- Format: { type: "chat_message", id: "unique_id", text: "message", sender: "username", timestamp: Date }
+
+"disconnect": (Handle WebSocket close event)
+- Remove client from room participant list.
+- Broadcast updated participant count.
+- Clean up empty rooms.
+
+Local Transcription with Vosk
+
+Library: Vosk via npm install vosk.
+Setup: Use a lightweight English model for real-time streaming recognition.
+Process: Convert audio blobs to text.
+
+Updated generateText Function
+
+Incorporate the tested IBM Granite API workflow:
+export const generateText = async (transcription) => {
+  const token = await getToken(); // Fetch IAM token using tested function
+  const url = "https://us-south.ml.cloud.ibm.com/ml/v1/text/chat?version=2023-05-29";
+  const headers = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
+  };
+  const body = {
+    messages: [
+      {
+        role: "system",
+        content: `You are an AI assistant designed to enhance brainstorming sessions. Given a transcribed spoken idea, perform two tasks in sequence:
+        
+        1. **Analyze**: Identify key themes or categories in the text. Consider concepts, emotions, or actionable ideas. Output this analysis within <think> tags.
+        2. **Generate**: Based on the identified themes and the original text, create 2-3 creative prompts to inspire further brainstorming. Output these prompts within <response> tags as a numbered list.
+        
+        Ensure the analysis is concise yet insightful, and the prompts are imaginative, specific, and relevant to the themes.`
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: transcription
+          }
+        ]
+      }
+    ],
+    project_id: "b7ca2505-b0d4-4c6b-8cf8-58ede2848f9f",
+    model_id: "ibm/granite-3-3-8b-instruct",
+    frequency_penalty: 0,
+    max_tokens: 2000,
+    presence_penalty: 0,
+    temperature: 0,
+    top_p: 1
+  };
+
+  const response = await fetch(url, {
+    headers,
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    throw new Error("Non-200 response from Granite API");
+  }
+
+  const result = await response.json();
+  const content = result.choices[0].message.content;
+  // Parse content using tested regex approach
+  const thinkMatch = content.match(/<think>(.*?)<\/think>/s);
+  const responseMatch = content.match(/<response>(.*?)<\/response>/s);
+  const themes = thinkMatch ? 
+    thinkMatch[1].trim().split(',').map(theme => theme.trim()) : 
+    [];
+  const prompts = responseMatch ? 
+    responseMatch[1].trim().split(/\d+\./).filter(Boolean).map(line => line.trim()) : 
+    [];
+  return { themes, prompts };
+}
+
+Security Improvements
+
+Store the API key as an environment variable (e.g., process.env.GRANITE_API_KEY).
+Implement token caching in getToken() to reduce authentication requests.
+Add rate limiting for API requests to prevent abuse.
+
+Error Handling
+
+Include detailed error logging for debugging (e.g., log API failures with status codes).
+Add graceful fallbacks (e.g., return cached or default prompts if API fails).
+Send error responses to clients: { type: "error", message: "Error description" }
+
+Implementation Steps
+
+Room Management: Use a Map to track rooms, participants, and ideas.
+Transcription: Integrate Vosk for real-time audio-to-text.
+AI Processing: Replace previous AI integration with generateText, parse output.
+WebSocket Logic: Update to handle all message types with new flow.
+CORS Setup: Configure to allow connections from the frontend origin.
+Optimization: Minimize latency with efficient API calls and WebSocket broadcasts.
+
+Notes
+
+The IBM Granite API replaces the previous AI integration, maintaining the same <think> and <response> tag system.
+Use in-memory storage for simplicity and speed.
+Ensure scalability for multiple rooms with proper cleanup of disconnected users.
+Frontend should display themes and prompts as received, with footer: "Created by Bhavya Pratap Singh Tomar, Team Leviathan".
+Implement a 30-second ping/pong mechanism to keep connections alive.
+
+This updated backend integrates the tested IBM Granite API workflow, ensuring a robust, secure, and efficient brainstorming experience within the existing WebSocket architecture.
