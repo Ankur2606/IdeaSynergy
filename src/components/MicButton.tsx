@@ -42,6 +42,8 @@ const MicButton: React.FC<MicButtonProps> = ({ onRecordingComplete }) => {
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const recordingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const transcriptHistoryRef = useRef<string>('');  // Store accumulated transcript
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Clean up on unmount
   useEffect(() => {
@@ -52,124 +54,201 @@ const MicButton: React.FC<MicButtonProps> = ({ onRecordingComplete }) => {
       if (recordingTimeoutRef.current) {
         clearTimeout(recordingTimeoutRef.current);
       }
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
     };
   }, []);
   
+  const startRecognition = () => {
+    // Initialize speech recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      throw new Error("Speech recognition not supported in this browser. Please try Chrome or Edge.");
+    }
+    
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = () => {
+      setIsRecording(true);
+      setStatus('recording');
+      
+      // Set a timeout to automatically stop recording after 30 seconds if no speech is detected
+      recordingTimeoutRef.current = setTimeout(() => {
+        if (transcriptHistoryRef.current.trim() === currentTranscript.trim()) {
+          console.log('No new speech detected after timeout, stopping recording');
+          if (recognitionRef.current) {
+            recognitionRef.current.stop();
+          }
+        }
+      }, 30000);
+    };
+    
+    recognition.onresult = (event) => {
+      let interimTranscript = '';
+      let finalTranscript = '';
+      
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+      
+      // Update the transcript, preserving previous content
+      const newTranscript = finalTranscript || interimTranscript;
+      
+      // If we have final transcripts, append them to our history
+      if (finalTranscript) {
+        transcriptHistoryRef.current += ' ' + finalTranscript.trim();
+        transcriptHistoryRef.current = transcriptHistoryRef.current.trim();
+        setCurrentTranscript(transcriptHistoryRef.current);
+      } else if (interimTranscript) {
+        // For interim results, show the history plus the interim
+        setCurrentTranscript((transcriptHistoryRef.current + ' ' + interimTranscript).trim());
+      }
+      
+      // If we got some speech, clear the timeout
+      if (newTranscript.trim() !== '') {
+        if (recordingTimeoutRef.current) {
+          clearTimeout(recordingTimeoutRef.current);
+          recordingTimeoutRef.current = null;
+          
+          // Reset the timeout for silence detection
+          recordingTimeoutRef.current = setTimeout(() => {
+            if (transcriptHistoryRef.current.trim() === currentTranscript.trim()) {
+              console.log('No new speech detected after timeout, stopping recording');
+              if (recognitionRef.current) {
+                recognitionRef.current.stop();
+              }
+            }
+          }, 30000);
+        }
+      }
+    };
+    
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error', event.error);
+      
+      // Handle specific error types
+      switch (event.error) {
+        case 'no-speech':
+          setErrorMessage('No speech detected. Please try again and speak clearly.');
+          break;
+        case 'audio-capture':
+          setErrorMessage('Could not access microphone. Please check your device settings.');
+          break;
+        case 'not-allowed':
+          setErrorMessage('Microphone permission was denied. Please allow microphone access.');
+          break;
+        case 'network':
+          setErrorMessage('Network error occurred. Please check your connection.');
+          break;
+        default:
+          setErrorMessage(`Error: ${event.error}. Please try again.`);
+          break;
+      }
+      
+      // For non-critical errors like "no-speech", try to restart recognition
+      if (event.error === 'no-speech' || event.error === 'network') {
+        if (isRecording) {
+          console.log('Attempting to restart recognition after error:', event.error);
+          // Attempt to restart after a brief pause
+          restartTimeoutRef.current = setTimeout(() => {
+            if (isRecording) {
+              try {
+                startRecognition();
+              } catch (e) {
+                console.error("Failed to restart recognition:", e);
+                setStatus('error');
+                setIsRecording(false);
+              }
+            }
+          }, 1000);
+          return;
+        }
+      }
+      
+      setStatus('error');
+      setIsRecording(false);
+      
+      // Clear any timeouts
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+      }
+      
+      // Reset after showing the error
+      setTimeout(() => {
+        setStatus('idle');
+        setErrorMessage('');
+      }, 3000);
+    };
+    
+    recognition.onend = () => {
+      console.log('Speech recognition ended');
+      
+      // Clear timeout if it exists
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+      }
+      
+      // If we're still supposed to be recording, restart the recognition
+      // This handles cases where the recognition service stops unexpectedly
+      if (isRecording && status !== 'error') {
+        console.log('Recognition ended but still recording, restarting...');
+        restartTimeoutRef.current = setTimeout(() => {
+          if (isRecording) {
+            try {
+              startRecognition();
+            } catch (e) {
+              console.error("Failed to restart recognition:", e);
+              setIsRecording(false);
+            }
+          }
+        }, 500);
+      } else {
+        // Only update recording state if we're intentionally stopping
+        setIsRecording(false);
+      }
+    };
+    
+    try {
+      recognition.start();
+    } catch (e) {
+      console.error("Error starting speech recognition:", e);
+      setIsRecording(false);
+      setStatus('error');
+      setErrorMessage(e instanceof Error ? e.message : 'Failed to start speech recognition');
+    }
+  };
+
   const startRecording = async () => {
     try {
       // Reset states
       setErrorMessage('');
+      transcriptHistoryRef.current = ''; // Clear transcript history
       setCurrentTranscript('');
       
-      // Initialize speech recognition
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      
-      if (!SpeechRecognition) {
-        throw new Error("Speech recognition not supported in this browser. Please try Chrome or Edge.");
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
       }
       
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
+      // Open overlay before starting recording
+      setOverlayVisible(true);
       
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-      
-      recognition.onstart = () => {
-        setIsRecording(true);
-        setStatus('recording');
-        setOverlayVisible(true);
-        
-        // Set a timeout to automatically stop recording after 30 seconds if no speech is detected
-        recordingTimeoutRef.current = setTimeout(() => {
-          if (currentTranscript.trim() === '') {
-            console.log('No speech detected after timeout, stopping recording');
-            if (recognitionRef.current) {
-              recognitionRef.current.stop();
-            }
-          }
-        }, 30000);
-      };
-      
-      recognition.onresult = (event) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + ' ';
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        
-        // Update the transcript
-        const newTranscript = finalTranscript || interimTranscript;
-        setCurrentTranscript(newTranscript);
-        
-        // If we got some speech, clear the timeout
-        if (newTranscript.trim() !== '' && recordingTimeoutRef.current) {
-          clearTimeout(recordingTimeoutRef.current);
-          recordingTimeoutRef.current = null;
-        }
-      };
-      
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error', event.error);
-        
-        // Handle specific error types
-        switch (event.error) {
-          case 'no-speech':
-            setErrorMessage('No speech detected. Please try again and speak clearly.');
-            break;
-          case 'audio-capture':
-            setErrorMessage('Could not access microphone. Please check your device settings.');
-            break;
-          case 'not-allowed':
-            setErrorMessage('Microphone permission was denied. Please allow microphone access.');
-            break;
-          case 'network':
-            setErrorMessage('Network error occurred. Please check your connection.');
-            break;
-          default:
-            setErrorMessage(`Error: ${event.error}. Please try again.`);
-            break;
-        }
-        
-        setStatus('error');
-        setIsRecording(false);
-        
-        // Clear any timeouts
-        if (recordingTimeoutRef.current) {
-          clearTimeout(recordingTimeoutRef.current);
-          recordingTimeoutRef.current = null;
-        }
-        
-        // Reset after showing the error
-        setTimeout(() => {
-          setStatus('idle');
-          setErrorMessage('');
-        }, 3000);
-      };
-      
-      recognition.onend = () => {
-        // Clear timeout if it exists
-        if (recordingTimeoutRef.current) {
-          clearTimeout(recordingTimeoutRef.current);
-          recordingTimeoutRef.current = null;
-        }
-        
-        // Keep overlay open when recording ends unless there was an error
-        if (status !== 'error') {
-          setIsRecording(false);
-          // We don't close the overlay here, user can review text
-        } else {
-          setOverlayVisible(false);
-        }
-      };
-      
-      recognition.start();
+      // Start recognition
+      startRecognition();
     } catch (error) {
       console.error("Error with speech recognition:", error);
       setStatus('error');
@@ -185,15 +264,23 @@ const MicButton: React.FC<MicButtonProps> = ({ onRecordingComplete }) => {
   };
 
   const stopRecording = () => {
+    console.log('Stopping recording');
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
     
-    // Clear timeout if it exists
+    // Clear all timeouts
     if (recordingTimeoutRef.current) {
       clearTimeout(recordingTimeoutRef.current);
       recordingTimeoutRef.current = null;
     }
+    
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
+    
+    setIsRecording(false);
   };
 
   const toggleRecording = () => {
@@ -211,10 +298,20 @@ const MicButton: React.FC<MicButtonProps> = ({ onRecordingComplete }) => {
       setIsRecording(false);
     }
     
+    // Clear all timeouts
+    if (recordingTimeoutRef.current) {
+      clearTimeout(recordingTimeoutRef.current);
+    }
+    
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+    }
+    
     // Close overlay
     setOverlayVisible(false);
     setStatus('idle');
     setCurrentTranscript('');
+    transcriptHistoryRef.current = '';
   };
 
   const handleOverlaySubmit = (text: string) => {
@@ -224,6 +321,11 @@ const MicButton: React.FC<MicButtonProps> = ({ onRecordingComplete }) => {
     // Show processing state
     setStatus('processing');
     
+    // Clear any ongoing recording
+    if (isRecording) {
+      stopRecording();
+    }
+    
     // Submit the transcription
     onRecordingComplete(text);
     
@@ -231,6 +333,7 @@ const MicButton: React.FC<MicButtonProps> = ({ onRecordingComplete }) => {
     setTimeout(() => {
       setStatus('idle');
       setCurrentTranscript('');
+      transcriptHistoryRef.current = '';
     }, 2000);
   };
 

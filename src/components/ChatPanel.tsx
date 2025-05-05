@@ -1,7 +1,9 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 
 interface Message {
   id: string;
@@ -56,7 +58,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage }) => {
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white rounded-bl-none'
                 }`}
               >
-                <p className="text-sm">{msg.text}</p>
+                <div className="text-sm prose dark:prose-invert prose-sm max-w-none">
+                  <ReactMarkdown
+                    rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                  >
+                    {msg.text}
+                  </ReactMarkdown>
+                </div>
                 <span className={`text-xs mt-1 ${
                   msg.sender === 'me' ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                 }`}>

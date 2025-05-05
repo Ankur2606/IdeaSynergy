@@ -99,12 +99,15 @@ const RoomPage = () => {
             
           case 'chat_message':
             // New chat message from another user
-            setMessages(prev => [...prev, {
-              id: data.id,
-              text: data.text,
-              sender: data.sender,
-              timestamp: new Date(data.timestamp)
-            }]);
+             // This prevents duplicate messages since we already add our own messages optimistically
+             if (data.sender !== username) {
+              setMessages(prev => [...prev, {
+                id: data.id,
+                text: data.text,
+                sender: data.sender,
+                timestamp: new Date(data.timestamp)
+              }]);
+            }
             break;
             
           case 'error':

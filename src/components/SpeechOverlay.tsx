@@ -22,11 +22,15 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const textAreaRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const lastTextRef = useRef<string>(''); // Keep track of the last text value
+  const cursorPositionRef = useRef<{ start: number, end: number }>({ start: 0, end: 0 });
+  const isUpdatingRef = useRef<boolean>(false);
 
   // Reset state when opened
   useEffect(() => {
     if (isOpen) {
       setText(initialText);
+      lastTextRef.current = initialText;
       setIsEditing(false);
     }
   }, [isOpen, initialText]);
@@ -45,17 +49,140 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
 
   // Update text when initialText changes (during speech)
   useEffect(() => {
-    if (!isEditing && initialText !== text) {
-      setText(initialText);
+    if (!isEditing && initialText !== '') {
+      // Only update if we have new text to append
+      if (initialText.length > lastTextRef.current.length) {
+        // Preserve existing text and append new content
+        setText((prevText) => {
+          // If the new text starts with the old text, just use the new text
+          // This handles cases where the transcription engine might refine earlier parts
+          if (initialText.startsWith(prevText)) {
+            lastTextRef.current = initialText;
+            return initialText;
+          } else {
+            // Otherwise append only the new portion
+            lastTextRef.current = initialText;
+            return prevText;
+          }
+        });
+      }
     }
   }, [initialText, isEditing]);
 
-  // Focus textarea when entering edit mode
+  // Store cursor position before any updates
+  const saveCursorPosition = () => {
+    if (!isEditing || !textAreaRef.current) return;
+    
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    if (!textAreaRef.current.contains(range.commonAncestorContainer)) return;
+    
+    cursorPositionRef.current = {
+      start: range.startOffset,
+      end: range.endOffset
+    };
+  };
+  
+  // Restore cursor position after updates
+  const restoreCursorPosition = () => {
+    if (!isEditing || !textAreaRef.current || isUpdatingRef.current) return;
+    
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
+      try {
+        const textNode = findFirstTextNode(textAreaRef.current);
+        if (!textNode) {
+          // If no text node exists, create one
+          const newTextNode = document.createTextNode(text);
+          textAreaRef.current?.appendChild(newTextNode);
+          
+          const selection = window.getSelection();
+          if (selection) {
+            const range = document.createRange();
+            const position = Math.min(cursorPositionRef.current.start, text.length);
+            range.setStart(newTextNode, position);
+            range.setEnd(newTextNode, position);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          return;
+        }
+        
+        const selection = window.getSelection();
+        if (!selection) return;
+        
+        const range = document.createRange();
+        const startPosition = Math.min(cursorPositionRef.current.start, textNode.length);
+        const endPosition = Math.min(cursorPositionRef.current.end, textNode.length);
+        
+        range.setStart(textNode, startPosition);
+        range.setEnd(textNode, endPosition);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } catch (e) {
+        console.error('Error restoring cursor position:', e);
+      } finally {
+        isUpdatingRef.current = false;
+      }
+    });
+  };
+  
+  // Helper function to find the first text node
+  const findFirstTextNode = (element: Node): Text | null => {
+    if (element.nodeType === Node.TEXT_NODE) {
+      return element as Text;
+    }
+    
+    for (let i = 0; i < element.childNodes.length; i++) {
+      const textNode = findFirstTextNode(element.childNodes[i]);
+      if (textNode) {
+        return textNode;
+      }
+    }
+    
+    return null;
+  };
+
+  // Focus textarea when entering edit mode and place cursor at the end
   useEffect(() => {
     if (isEditing && textAreaRef.current) {
       textAreaRef.current.focus();
+      
+      // Place cursor at the end of content
+      const range = document.createRange();
+      const selection = window.getSelection();
+      
+      // First try to find a text node
+      const textNode = findFirstTextNode(textAreaRef.current);
+      
+      if (textNode) {
+        // If we have a text node, set cursor to the end of it
+        range.setStart(textNode, textNode.length);
+        range.setEnd(textNode, textNode.length);
+      } else if (textAreaRef.current.childNodes.length > 0) {
+        // Otherwise try to set it after the last child
+        const lastNode = textAreaRef.current.lastChild;
+        if (lastNode) {
+          range.setStartAfter(lastNode);
+          range.collapse(true);
+        }
+      } else {
+        // If no nodes exist, just set the cursor in the element
+        range.setStart(textAreaRef.current, 0);
+        range.setEnd(textAreaRef.current, 0);
+      }
+      
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      
+      // Set cursor position reference
+      cursorPositionRef.current = { start: text.length, end: text.length };
     }
-  }, [isEditing]);
+  }, [isEditing, text.length]);
 
   // Handle overlay click to prevent closing when clicking inside
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -80,11 +207,46 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
     }
   };
 
-  // Handle content editable changes
+  // Track cursor position when it changes
+  const handleSelectionChange = () => {
+    if (!isEditing || isUpdatingRef.current) return;
+    
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    
+    const range = selection.getRangeAt(0);
+    if (!textAreaRef.current?.contains(range.commonAncestorContainer)) return;
+    
+    cursorPositionRef.current = {
+      start: range.startOffset,
+      end: range.endOffset
+    };
+  };
+
+  // Set up selection change listener
+  useEffect(() => {
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+    };
+  }, []);
+
+  // Handle content editable changes with improved cursor maintenance
   const handleTextChange = () => {
-    if (textAreaRef.current) {
-      setText(textAreaRef.current.innerText || '');
-    }
+    if (!textAreaRef.current || isUpdatingRef.current) return;
+    
+    // Prevent rapid updates causing cursor issues
+    isUpdatingRef.current = true;
+    
+    // Save cursor position before updating state
+    saveCursorPosition();
+    
+    // Update the text state
+    const newText = textAreaRef.current.innerText || '';
+    setText(newText);
+    
+    // Restore cursor position after state update
+    restoreCursorPosition();
   };
 
   if (!isOpen) return null;

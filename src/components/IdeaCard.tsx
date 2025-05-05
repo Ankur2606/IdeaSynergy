@@ -1,9 +1,11 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Lightbulb, Send, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 
 interface Comment {
   id: string;
@@ -133,7 +135,13 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onAddComment }) => {
                       {idea.prompts.map((prompt, index) => (
                         <li key={index} className="text-gray-600 dark:text-gray-300 flex items-start">
                           <span className="mr-2 flex-shrink-0">•</span>
-                          <span>{prompt}</span>
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <ReactMarkdown
+                              rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                            >
+                              {prompt}
+                            </ReactMarkdown>
+                          </div>
                         </li>
                       ))}
                     </ul>
