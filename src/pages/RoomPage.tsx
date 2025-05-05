@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Header from '../components/Header';
@@ -7,6 +6,7 @@ import MicButton from '../components/MicButton';
 import IdeaCard, { Idea } from '../components/IdeaCard';
 import ChatPanel from '../components/ChatPanel';
 import { useToast } from '@/hooks/use-toast';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { 
   connectWebSocket, 
   sendMessage, 
@@ -229,40 +229,44 @@ const RoomPage = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
       <Header roomCode={roomCode} participants={participants} />
       
-      <main className="flex-grow flex flex-col md:flex-row overflow-hidden">
-        <div className="flex-grow p-6 overflow-y-auto">
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-12 flex justify-center">
-              <MicButton onRecordingComplete={handleRecordingComplete} />
+      <main className="flex-grow overflow-hidden">
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          <ResizablePanel defaultSize={75} className="overflow-y-auto">
+            <div className="max-w-4xl mx-auto p-6">
+              <div className="mb-12 flex justify-center">
+                <MicButton onRecordingComplete={handleRecordingComplete} />
+              </div>
+              
+              <div className="space-y-6">
+                {ideas.length === 0 ? (
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-10">
+                    <p className="text-lg">No ideas yet. Start by recording your first idea!</p>
+                  </div>
+                ) : (
+                  ideas.map(idea => (
+                    <IdeaCard 
+                      key={idea.id} 
+                      idea={idea} 
+                      onAddComment={handleAddComment} 
+                    />
+                  ))
+                )}
+              </div>
             </div>
-            
-            <div className="space-y-6">
-              {ideas.length === 0 ? (
-                <div className="text-center text-gray-500 py-10">
-                  <p>No ideas yet. Start by recording your first idea!</p>
-                </div>
-              ) : (
-                ideas.map(idea => (
-                  <IdeaCard 
-                    key={idea.id} 
-                    idea={idea} 
-                    onAddComment={handleAddComment} 
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-        
-        <div className="w-full md:w-80 lg:w-96 h-80 md:h-auto flex-shrink-0 border-t md:border-t-0">
-          <ChatPanel 
-            messages={messages}
-            onSendMessage={handleSendChatMessage}
-          />
-        </div>
+          </ResizablePanel>
+          
+          <ResizableHandle withHandle className="bg-gray-200 dark:bg-gray-700" />
+          
+          <ResizablePanel defaultSize={25} className="h-full">
+            <ChatPanel 
+              messages={messages}
+              onSendMessage={handleSendChatMessage}
+            />
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </main>
       
       <Footer />

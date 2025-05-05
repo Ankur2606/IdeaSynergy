@@ -64,12 +64,12 @@ const MicButton: React.FC<MicButtonProps> = ({ onRecordingComplete }) => {
       <button
         onClick={handleClick}
         disabled={status === 'processing'}
-        className={`w-24 h-24 rounded-full flex items-center justify-center shadow-lg button-hover ${
+        className={`w-24 h-24 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 dark:text-white ${
           status === 'recording'
-            ? 'bg-red-500 text-white animate-recording'
+            ? 'bg-red-500 text-white animate-recording shadow-red-500/30'
             : status === 'processing'
-            ? 'bg-synergy-orange text-white'
-            : 'bg-synergy-green text-white'
+            ? 'bg-synergy-orange text-white shadow-synergy-orange/30'
+            : 'bg-synergy-green text-white hover:shadow-synergy-green/50 hover:scale-105 shadow-synergy-green/30'
         }`}
       >
         <Mic size={36} />
@@ -77,13 +77,16 @@ const MicButton: React.FC<MicButtonProps> = ({ onRecordingComplete }) => {
       
       <div className="h-6 mt-3 text-center">
         {status === 'recording' && (
-          <span className="text-red-500 font-medium animate-pulse">Recording...</span>
+          <span className="text-red-500 dark:text-red-400 font-medium animate-pulse flex items-center">
+            <span className="w-2 h-2 rounded-full bg-red-500 mr-2 animate-pulse"></span>
+            Recording...
+          </span>
         )}
         {status === 'processing' && (
-          <span className="text-synergy-orange font-medium">Processing...</span>
+          <span className="text-synergy-orange dark:text-synergy-orange font-medium">Processing...</span>
         )}
         {status === 'idle' && (
-          <span className="text-gray-500">Share Idea</span>
+          <span className="text-gray-500 dark:text-gray-400">Share Idea</span>
         )}
       </div>
     </div>

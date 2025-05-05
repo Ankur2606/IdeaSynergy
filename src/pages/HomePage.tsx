@@ -22,34 +22,39 @@ const HomePage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
       <Header />
       
       <main className="flex-grow flex items-center justify-center">
         <div className="max-w-2xl w-full px-4 py-16 text-center">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Welcome to IdeaSynergy
-          </h1>
-          
-          <p className="text-xl text-gray-600 mb-12">
-            Transform your brainstorming sessions with AI-powered creativity.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              onClick={() => navigate('/join')}
-              className="bg-synergy-green hover:bg-synergy-green/90 text-white px-8 py-6 text-lg button-hover"
-            >
-              Join Room
-            </Button>
+          <div className="space-y-6">
+            <div className="mb-2 inline-block relative">
+              <span className="absolute -inset-1 -z-10 rounded-full blur bg-gradient-to-r from-synergy-blue/20 to-synergy-green/20"></span>
+              <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
+                Welcome to <span className="bg-gradient-to-r from-synergy-blue to-synergy-green bg-clip-text text-transparent">IdeaSynergy</span>
+              </h1>
+            </div>
             
-            <Button
-              onClick={handleCreateRoom}
-              variant="outline"
-              className="border-synergy-orange text-synergy-orange hover:bg-synergy-orange/10 px-8 py-6 text-lg button-hover"
-            >
-              Create Room
-            </Button>
+            <p className="text-xl text-gray-600 dark:text-gray-300 mb-12 max-w-xl mx-auto">
+              Transform your brainstorming sessions with AI-powered creativity and real-time collaboration.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+              <Button
+                onClick={() => navigate('/join')}
+                className="bg-synergy-green hover:bg-synergy-green/90 text-white px-8 py-6 text-lg shadow-lg shadow-synergy-green/20 hover:shadow-synergy-green/30 transition-all hover:scale-105"
+              >
+                Join Room
+              </Button>
+              
+              <Button
+                onClick={handleCreateRoom}
+                variant="outline"
+                className="border-2 border-synergy-orange text-synergy-orange hover:bg-synergy-orange/10 px-8 py-6 text-lg transition-all hover:scale-105 dark:border-synergy-orange dark:text-synergy-orange"
+              >
+                Create Room
+              </Button>
+            </div>
           </div>
         </div>
       </main>

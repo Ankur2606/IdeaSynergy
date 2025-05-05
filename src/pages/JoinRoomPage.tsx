@@ -1,11 +1,13 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft } from 'lucide-react';
 
 const JoinRoomPage = () => {
   const [roomCode, setRoomCode] = useState('');
@@ -29,12 +31,17 @@ const JoinRoomPage = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
       <Header />
       
-      <main className="flex-grow flex items-center justify-center">
-        <div className="max-w-md w-full p-8 bg-white rounded-xl shadow-lg">
-          <h1 className="text-3xl font-bold text-center mb-8">
+      <main className="flex-grow flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-xl shadow-xl dark:shadow-gray-900/30 border border-gray-100 dark:border-gray-700"
+        >
+          <h1 className="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">
             Join a Brainstorming Room
           </h1>
           
@@ -43,31 +50,33 @@ const JoinRoomPage = () => {
               <Input
                 type="text"
                 value={roomCode}
-                onChange={(e) => setRoomCode(e.target.value)}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                 placeholder="Enter Room Code"
-                className="w-full px-4 py-6 text-lg text-center uppercase"
+                className="w-full px-4 py-6 text-lg text-center uppercase font-mono tracking-wider dark:bg-gray-700 dark:text-white dark:border-gray-600"
                 maxLength={6}
               />
             </div>
             
             <Button 
               type="submit" 
-              className="w-full bg-synergy-blue hover:bg-synergy-blue/90 py-6 text-lg button-hover"
+              className="w-full bg-synergy-blue hover:bg-synergy-blue/90 py-6 text-lg transition-transform hover:scale-105"
             >
               Join
             </Button>
             
             <div className="text-center">
-              <button 
+              <Button 
                 type="button" 
                 onClick={() => navigate('/')} 
-                className="text-gray-500 hover:text-gray-800 text-sm"
+                variant="ghost"
+                className="text-gray-500 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white text-sm flex items-center gap-2"
               >
+                <ArrowLeft size={16} />
                 Back to Home
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </motion.div>
       </main>
       
       <Footer />
