@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Header from '../components/Header';
@@ -7,6 +8,13 @@ import IdeaCard, { Idea } from '../components/IdeaCard';
 import ChatPanel from '../components/ChatPanel';
 import { useToast } from '@/hooks/use-toast';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
+import { 
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
+} from '@/components/ui/carousel';
 import { 
   connectWebSocket, 
   sendMessage, 
@@ -240,21 +248,32 @@ const RoomPage = () => {
                 <MicButton onRecordingComplete={handleRecordingComplete} />
               </div>
               
-              <div className="space-y-6">
-                {ideas.length === 0 ? (
-                  <div className="text-center text-gray-500 dark:text-gray-400 py-10">
-                    <p className="text-lg">No ideas yet. Start by recording your first idea!</p>
-                  </div>
-                ) : (
-                  ideas.map(idea => (
-                    <IdeaCard 
-                      key={idea.id} 
-                      idea={idea} 
-                      onAddComment={handleAddComment} 
-                    />
-                  ))
+              <Carousel className="w-full relative">
+                <CarouselContent>
+                  {ideas.length === 0 ? (
+                    <CarouselItem>
+                      <div className="text-center text-gray-500 dark:text-gray-400 py-10">
+                        <p className="text-lg">No ideas yet. Start by recording your first idea!</p>
+                      </div>
+                    </CarouselItem>
+                  ) : (
+                    ideas.map(idea => (
+                      <CarouselItem key={idea.id}>
+                        <IdeaCard 
+                          idea={idea} 
+                          onAddComment={handleAddComment} 
+                        />
+                      </CarouselItem>
+                    ))
+                  )}
+                </CarouselContent>
+                {ideas.length > 1 && (
+                  <>
+                    <CarouselPrevious className="left-0 lg:-left-12" />
+                    <CarouselNext className="right-0 lg:-right-12" />
+                  </>
                 )}
-              </div>
+              </Carousel>
             </div>
           </ResizablePanel>
           
