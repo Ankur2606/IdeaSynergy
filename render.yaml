@@ -3,7 +3,7 @@ services:
     name: ideasynergy
     env: node
     plan: free
-    buildCommand: npm install && npm run build:safe
+    buildCommand: chmod +x ./build.sh && ./build.sh
     startCommand: node --experimental-modules --es-module-specifier-resolution=node ./dist/server/index.js
     envVars:
       - key: IBM_API_KEY
@@ -12,4 +12,6 @@ services:
         value: 10000
       - key: VITE_WEBSOCKET_URL
         value: wss://${RENDER_EXTERNAL_HOSTNAME}/ws
+      - key: NODE_VERSION
+        value: 18
     healthCheckPath: /health
