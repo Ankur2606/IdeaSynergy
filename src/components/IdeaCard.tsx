@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { MessageSquare, Lightbulb, Send, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Comment {
   id: string;
@@ -37,8 +38,8 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onAddComment }) => {
   };
 
   return (
-    <Card className="bg-card animate-fade-in shadow-lg dark:shadow-gray-900/30 border-gray-100 dark:border-gray-700 transition-all">
-      <CardContent className="p-6">
+    <Card className="bg-card animate-fade-in shadow-lg dark:shadow-gray-900/30 border-gray-100 dark:border-gray-700 transition-all max-h-[80vh] flex flex-col">
+      <CardContent className="p-6 overflow-hidden flex flex-col">
         <h3 className="font-bold text-lg mb-4 text-foreground">{idea.transcription}</h3>
         
         <div className="mb-4 flex flex-wrap gap-2">
@@ -69,21 +70,23 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onAddComment }) => {
             </Button>
             
             {showPrompts && (
-              <div className="mt-2 bg-synergy-green-light dark:bg-synergy-green/10 rounded-lg p-4 border-l-4 border-synergy-green animate-accordion-down">
-                <ul className="space-y-2">
-                  {idea.prompts.map((prompt, index) => (
-                    <li key={index} className="text-gray-600 dark:text-gray-300 flex items-start">
-                      <span className="mr-2">•</span>
-                      <span>{prompt}</span>
-                    </li>
-                  ))}
-                </ul>
+              <div className="mt-2 bg-synergy-green-light dark:bg-synergy-green/10 rounded-lg p-4 border-l-4 border-synergy-green animate-accordion-down overflow-hidden max-h-60">
+                <ScrollArea className="pr-4 max-h-56">
+                  <ul className="space-y-2">
+                    {idea.prompts.map((prompt, index) => (
+                      <li key={index} className="text-gray-600 dark:text-gray-300 flex items-start">
+                        <span className="mr-2 flex-shrink-0">•</span>
+                        <span>{prompt}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
               </div>
             )}
           </div>
         )}
         
-        <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700">
           <Button
             variant="ghost"
             size="sm"
@@ -102,20 +105,24 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onAddComment }) => {
           </Button>
           
           {showComments && (
-            <div className="animate-accordion-down">
-              <div className="max-h-60 overflow-y-auto my-3 space-y-3">
-                {idea.comments.length === 0 ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No comments yet</p>
-                ) : (
-                  idea.comments.map((comment, index) => (
-                    <div key={index} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                      <p className="text-sm text-gray-700 dark:text-gray-200">{comment.text}</p>
-                      {comment.author && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">{comment.author}</p>
-                      )}
-                    </div>
-                  ))
-                )}
+            <div className="animate-accordion-down mt-2">
+              <div className="max-h-60 overflow-hidden">
+                <ScrollArea className="pr-4 max-h-56">
+                  <div className="space-y-3">
+                    {idea.comments.length === 0 ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No comments yet</p>
+                    ) : (
+                      idea.comments.map((comment, index) => (
+                        <div key={index} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
+                          <p className="text-sm text-gray-700 dark:text-gray-200">{comment.text}</p>
+                          {comment.author && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">{comment.author}</p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
               </div>
               
               <form onSubmit={handleSubmitComment} className="flex gap-2 mt-3">
