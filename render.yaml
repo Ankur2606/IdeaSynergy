@@ -3,8 +3,8 @@ services:
     name: ideasynergy
     env: node
     plan: free
-    buildCommand: chmod +x ./build.sh && ./build.sh
-    startCommand: node --experimental-modules --es-module-specifier-resolution=node ./dist/server/index.js
+    buildCommand: "chmod +x ./build.sh && ./build.sh"
+    startCommand: "node --experimental-modules --es-module-specifier-resolution=node ./dist/server/index.js"
     envVars:
       - key: IBM_API_KEY
         sync: false
