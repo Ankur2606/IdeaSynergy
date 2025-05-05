@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { MessageSquare, Lightbulb, Send, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageSquare, Lightbulb, Send, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,16 +24,54 @@ interface IdeaCardProps {
   onAddComment: (ideaId: string, comment: string) => void;
 }
 
+// Number of comments to show initially
+const COMMENTS_PER_PAGE = 2;
+
 const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onAddComment }) => {
   const [comment, setComment] = useState('');
   const [showComments, setShowComments] = useState(false);
   const [showPrompts, setShowPrompts] = useState(false);
+  const [visibleComments, setVisibleComments] = useState(COMMENTS_PER_PAGE);
+  
+  const promptsSectionRef = useRef<HTMLDivElement>(null);
+  const commentsSectionRef = useRef<HTMLDivElement>(null);
+
+  // Handle expanding of prompts section with auto-scrolling
+  useEffect(() => {
+    if (showPrompts && promptsSectionRef.current) {
+      setTimeout(() => {
+        promptsSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest'
+        });
+      }, 300); // Small delay to allow animation to start
+    }
+  }, [showPrompts]);
+
+  // Handle expanding of comments section with auto-scrolling
+  useEffect(() => {
+    if (showComments && commentsSectionRef.current) {
+      setTimeout(() => {
+        commentsSectionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest'
+        });
+      }, 300); // Small delay to allow animation to start
+    }
+  }, [showComments]);
+
+  // Load more comments
+  const handleLoadMoreComments = () => {
+    setVisibleComments(prev => Math.min(prev + COMMENTS_PER_PAGE, idea.comments.length));
+  };
 
   const handleSubmitComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (comment.trim()) {
       onAddComment(idea.id, comment);
       setComment('');
+      // Show one more comment when adding a new one to include the one just added
+      setVisibleComments(prev => Math.min(prev + 1, idea.comments.length + 1));
     }
   };
 
@@ -70,7 +108,10 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onAddComment }) => {
             </Button>
             
             {showPrompts && (
-              <div className="mt-2 bg-synergy-green-light dark:bg-synergy-green/10 rounded-lg p-4 border-l-4 border-synergy-green animate-accordion-down overflow-hidden max-h-60">
+              <div 
+                ref={promptsSectionRef}
+                className="mt-2 bg-synergy-green-light dark:bg-synergy-green/10 rounded-lg p-4 border-l-4 border-synergy-green animate-accordion-down overflow-hidden max-h-60"
+              >
                 <ScrollArea className="pr-4 max-h-56">
                   <ul className="space-y-2">
                     {idea.prompts.map((prompt, index) => (
@@ -105,14 +146,17 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onAddComment }) => {
           </Button>
           
           {showComments && (
-            <div className="animate-accordion-down mt-2">
+            <div 
+              ref={commentsSectionRef} 
+              className="animate-accordion-down mt-2"
+            >
               <div className="max-h-60 overflow-hidden">
                 <ScrollArea className="pr-4 max-h-56">
                   <div className="space-y-3">
                     {idea.comments.length === 0 ? (
                       <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">No comments yet</p>
                     ) : (
-                      idea.comments.map((comment, index) => (
+                      idea.comments.slice(0, visibleComments).map((comment, index) => (
                         <div key={index} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
                           <p className="text-sm text-gray-700 dark:text-gray-200">{comment.text}</p>
                           {comment.author && (
@@ -124,6 +168,20 @@ const IdeaCard: React.FC<IdeaCardProps> = ({ idea, onAddComment }) => {
                   </div>
                 </ScrollArea>
               </div>
+              
+              {visibleComments < idea.comments.length && (
+                <div className="mt-3 flex justify-center">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="flex items-center gap-1 text-xs"
+                    onClick={handleLoadMoreComments}
+                  >
+                    <Plus size={12} />
+                    <span>Load more comments</span>
+                  </Button>
+                </div>
+              )}
               
               <form onSubmit={handleSubmitComment} className="flex gap-2 mt-3">
                 <input
