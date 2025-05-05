@@ -61,18 +61,145 @@ express.static.mime.define({
   'text/javascript': ['js', 'mjs']
 });
 
-// Serve static files from the React app build directory
-const staticPath = path.resolve(__dirname, '../../');
-if (fs.existsSync(path.join(staticPath, 'index.html'))) {
-  app.use(express.static(staticPath, {
-    setHeaders: (res, path) => {
-      // Set proper content type for JavaScript modules
-      if (path.endsWith('.js') || path.endsWith('.mjs')) {
-        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      }
+// Debugging - log current directory structure
+console.log("Current directory structure:");
+fs.readdirSync('.').forEach(file => {
+  console.log(file);
+});
+
+// Try multiple possible static file paths
+const possiblePaths = [
+  path.resolve(__dirname, '../../'),
+  path.resolve(__dirname, '../'),
+  path.resolve(__dirname, '../../dist'),
+  path.resolve(__dirname, '../../public'),
+  path.resolve('.'),
+  path.resolve('./public')
+];
+
+let staticPathFound = false;
+for (const testPath of possiblePaths) {
+  try {
+    if (fs.existsSync(path.join(testPath, 'index.html'))) {
+      app.use(express.static(testPath, {
+        setHeaders: (res, filePath) => {
+          // Set proper content type for JavaScript modules
+          if (filePath.endsWith('.js') || filePath.endsWith('.mjs')) {
+            res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+          }
+        }
+      }));
+      console.log(`Serving static files from ${testPath}`);
+      staticPathFound = true;
+      break;
+    } else {
+      console.log(`No index.html found in ${testPath}`);
     }
-  }));
-  console.log(`Serving static files from ${staticPath}`);
+  } catch (err) {
+    console.log(`Error checking path ${testPath}:`, err);
+  }
+}
+
+// Create fallback index.html if none exists
+if (!staticPathFound) {
+  console.log("No static files found. Creating fallback index.html");
+  const fallbackDir = path.resolve('./public');
+  
+  try {
+    if (!fs.existsSync(fallbackDir)) {
+      fs.mkdirSync(fallbackDir, { recursive: true });
+    }
+
+    const fallbackHtml = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>IdeaSynergy</title>
+        <style>
+          body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+          }
+          .container {
+            max-width: 800px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          }
+          h1 {
+            color: #2563eb;
+            margin-top: 0;
+          }
+          .button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 20px;
+          }
+          .api-info {
+            margin-top: 30px;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: left;
+          }
+          code {
+            background-color: #e9ecef;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1>IdeaSynergy API</h1>
+          <p>The IdeaSynergy server is running successfully!</p>
+          <p>The frontend application needs to be rebuilt.</p>
+          
+          <div class="api-info">
+            <h2>Available API Endpoints:</h2>
+            <ul>
+              <li><code>GET /health</code> - Check server status</li>
+              <li><code>GET /api/rooms/:roomCode</code> - Get information about a specific room</li>
+              <li><code>WebSocket /ws</code> - Connect to the WebSocket server for real-time communication</li>
+            </ul>
+            <h2>WebSocket Events:</h2>
+            <ul>
+              <li><code>join_room</code> - Join a brainstorming room</li>
+              <li><code>send_transcription</code> - Send a transcribed idea for AI analysis</li>
+              <li><code>add_comment</code> - Add a comment to an idea</li>
+              <li><code>chat_message</code> - Send a chat message to the room</li>
+            </ul>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    fs.writeFileSync(path.join(fallbackDir, 'index.html'), fallbackHtml);
+    app.use(express.static(fallbackDir));
+    console.log(`Created and serving fallback static files from ${fallbackDir}`);
+    staticPathFound = true;
+  } catch (err) {
+    console.error("Failed to create fallback index.html:", err);
+  }
 }
 
 // Health check endpoint
@@ -105,13 +232,30 @@ app.get('*', (req, res, next) => {
     return next();
   }
   
-  const indexPath = path.join(staticPath, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    // In development, we might not have the built files
-    next();
+  // Try to find index.html in one of our possible static paths
+  for (const testPath of possiblePaths) {
+    const indexPath = path.join(testPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
   }
+  
+  // If we couldn't find it anywhere, try the fallback
+  const fallbackPath = path.join('./public', 'index.html');
+  if (fs.existsSync(fallbackPath)) {
+    return res.sendFile(path.resolve(fallbackPath));
+  }
+  
+  // Last resort - send a basic HTML response
+  res.send(`
+    <html>
+      <head><title>IdeaSynergy API</title></head>
+      <body>
+        <h1>IdeaSynergy API is running</h1>
+        <p>The frontend is not available. Please check the build process.</p>
+      </body>
+    </html>
+  `);
 });
 
 // Create HTTP server
