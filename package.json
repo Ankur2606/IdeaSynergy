@@ -1,14 +1,19 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "ideasynergy",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && tsc -p tsconfig.server.json",
     "build:frontend": "tsc && vite build",
     "build:server": "tsc -p tsconfig.server.json",
-    "build:safe": "npm run build:frontend && npm run build:server",
+    "build:safe": "npm run build:frontend && npm run build:server && npm run postbuild",
+    "postbuild": "node ./scripts/fix-module-paths.js",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
