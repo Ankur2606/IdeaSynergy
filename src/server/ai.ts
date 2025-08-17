@@ -104,7 +104,7 @@ Be extremely concise with theme labels - each MUST be only 1-2 words maximum.`
           ]
         }
       ],
-      project_id: "b7ca2505-b0d4-4c6b-8cf8-58ede2848f9f",
+      project_id: "603cf9c1-567f-4786-8ea8-0344ec5d31af",
       model_id: "ibm/granite-3-3-8b-instruct",
       frequency_penalty: 0,
       max_tokens: 2000,
