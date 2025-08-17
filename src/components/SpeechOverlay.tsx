@@ -72,23 +72,23 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
   // Store cursor position before any updates
   const saveCursorPosition = () => {
     if (!isEditing || !textAreaRef.current) return;
-    
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
-    
+
     const range = selection.getRangeAt(0);
     if (!textAreaRef.current.contains(range.commonAncestorContainer)) return;
-    
+
     cursorPositionRef.current = {
       start: range.startOffset,
       end: range.endOffset
     };
   };
-  
+
   // Restore cursor position after updates
   const restoreCursorPosition = () => {
     if (!isEditing || !textAreaRef.current || isUpdatingRef.current) return;
-    
+
     // Use requestAnimationFrame to ensure DOM is updated
     requestAnimationFrame(() => {
       try {
@@ -97,7 +97,7 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
           // If no text node exists, create one
           const newTextNode = document.createTextNode(text);
           textAreaRef.current?.appendChild(newTextNode);
-          
+
           const selection = window.getSelection();
           if (selection) {
             const range = document.createRange();
@@ -109,14 +109,14 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
           }
           return;
         }
-        
+
         const selection = window.getSelection();
         if (!selection) return;
-        
+
         const range = document.createRange();
         const startPosition = Math.min(cursorPositionRef.current.start, textNode.length);
         const endPosition = Math.min(cursorPositionRef.current.end, textNode.length);
-        
+
         range.setStart(textNode, startPosition);
         range.setEnd(textNode, endPosition);
         selection.removeAllRanges();
@@ -128,20 +128,20 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
       }
     });
   };
-  
+
   // Helper function to find the first text node
   const findFirstTextNode = (element: Node): Text | null => {
     if (element.nodeType === Node.TEXT_NODE) {
       return element as Text;
     }
-    
+
     for (let i = 0; i < element.childNodes.length; i++) {
       const textNode = findFirstTextNode(element.childNodes[i]);
       if (textNode) {
         return textNode;
       }
     }
-    
+
     return null;
   };
 
@@ -149,14 +149,14 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
   useEffect(() => {
     if (isEditing && textAreaRef.current) {
       textAreaRef.current.focus();
-      
+
       // Place cursor at the end of content
       const range = document.createRange();
       const selection = window.getSelection();
-      
+
       // First try to find a text node
       const textNode = findFirstTextNode(textAreaRef.current);
-      
+
       if (textNode) {
         // If we have a text node, set cursor to the end of it
         range.setStart(textNode, textNode.length);
@@ -173,12 +173,12 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
         range.setStart(textAreaRef.current, 0);
         range.setEnd(textAreaRef.current, 0);
       }
-      
+
       if (selection) {
         selection.removeAllRanges();
         selection.addRange(range);
       }
-      
+
       // Set cursor position reference
       cursorPositionRef.current = { start: text.length, end: text.length };
     }
@@ -193,6 +193,13 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
 
   // Toggle editing mode
   const toggleEdit = () => {
+    // If we're currently editing, capture the final text before exiting edit mode
+    if (isEditing && textAreaRef.current) {
+      const finalText = textAreaRef.current.innerText || '';
+      setText(finalText);
+      lastTextRef.current = finalText;
+    }
+
     setIsEditing(!isEditing);
     if (!isEditing && onToggleRecording && isRecording) {
       // Stop recording when switching to edit mode
@@ -202,21 +209,23 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
 
   // Handle submit
   const handleSubmit = () => {
-    if (text.trim()) {
-      onSubmit(text.trim());
+    // Always get the current content from the editable div to ensure we have the latest text
+    const currentText = textAreaRef.current?.innerText || text;
+    if (currentText.trim()) {
+      onSubmit(currentText.trim());
     }
   };
 
   // Track cursor position when it changes
   const handleSelectionChange = () => {
     if (!isEditing || isUpdatingRef.current) return;
-    
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
-    
+
     const range = selection.getRangeAt(0);
     if (!textAreaRef.current?.contains(range.commonAncestorContainer)) return;
-    
+
     cursorPositionRef.current = {
       start: range.startOffset,
       end: range.endOffset
@@ -234,17 +243,18 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
   // Handle content editable changes with improved cursor maintenance
   const handleTextChange = () => {
     if (!textAreaRef.current || isUpdatingRef.current) return;
-    
+
     // Prevent rapid updates causing cursor issues
     isUpdatingRef.current = true;
-    
+
     // Save cursor position before updating state
     saveCursorPosition();
-    
-    // Update the text state
+
+    // Update the text state immediately
     const newText = textAreaRef.current.innerText || '';
     setText(newText);
-    
+    lastTextRef.current = newText; // Also update the last text reference
+
     // Restore cursor position after state update
     restoreCursorPosition();
   };
@@ -252,12 +262,12 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-all duration-300"
       onClick={handleOverlayClick}
       ref={overlayRef}
     >
-      <div 
+      <div
         className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg mx-4 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -265,8 +275,8 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
             {isRecording ? 'Listening...' : 'Review Your Idea'}
           </h3>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
           >
             <X size={20} />
@@ -274,19 +284,18 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
         </div>
 
         <div className="p-4">
-          <div 
+          <div
             ref={textAreaRef}
             contentEditable={isEditing}
             onInput={handleTextChange}
-            className={`min-h-32 max-h-64 overflow-y-auto p-3 rounded-md border ${
-              isEditing 
-                ? 'border-synergy-green focus:ring-2 focus:ring-synergy-green/50 focus:outline-none' 
+            className={`min-h-32 max-h-64 overflow-y-auto p-3 rounded-md border ${isEditing
+                ? 'border-synergy-green focus:ring-2 focus:ring-synergy-green/50 focus:outline-none'
                 : 'border-gray-200 dark:border-gray-700'
-            } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
+              } bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100`}
             suppressContentEditableWarning
           >
             {text || (
-              isRecording 
+              isRecording
                 ? <span className="text-gray-400 dark:text-gray-500">Speak now...</span>
                 : <span className="text-gray-400 dark:text-gray-500">No text captured yet. Click the mic button to start recording.</span>
             )}
@@ -307,25 +316,23 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
 
         <div className="flex justify-between p-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={onToggleRecording}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${
-                isRecording 
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${isRecording
                   ? 'bg-red-500 text-white hover:bg-red-600'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-              }`}
+                }`}
             >
               {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
               {isRecording ? 'Stop' : 'Record'}
             </button>
-            
-            <button 
+
+            <button
               onClick={toggleEdit}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${
-                isEditing 
-                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${isEditing
+                  ? 'bg-blue-500 text-white hover:bg-blue-600'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-              }`}
+                }`}
             >
               {isEditing ? <Check size={16} /> : <Edit2 size={16} />}
               {isEditing ? 'Done' : 'Edit'}
@@ -333,19 +340,18 @@ const SpeechOverlay: React.FC<SpeechOverlayProps> = ({
           </div>
 
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={onClose}
               className="px-3 py-1.5 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
             >
               Cancel
             </button>
-            
-            <button 
+
+            <button
               onClick={handleSubmit}
               disabled={!text.trim()}
-              className={`flex items-center gap-1 px-4 py-1.5 rounded-md bg-synergy-green text-white ${
-                text.trim() ? 'hover:bg-synergy-green/90' : 'opacity-50 cursor-not-allowed'
-              }`}
+              className={`flex items-center gap-1 px-4 py-1.5 rounded-md bg-synergy-green text-white ${text.trim() ? 'hover:bg-synergy-green/90' : 'opacity-50 cursor-not-allowed'
+                }`}
             >
               <Send size={16} />
               Send
