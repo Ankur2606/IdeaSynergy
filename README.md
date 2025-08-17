@@ -1,8 +1,10 @@
 # IdeaSynergy
 
-A collaborative brainstorming application that transcribes spoken ideas, analyzes them for themes, and generates creative prompts to inspire further ideation—all powered by the Granite-3.3-8B-Instruct model via the Watson X API.
-
 ![IdeaSynergy](https://github.com/user-attachments/assets/f90a9c87-95a6-4445-bb2c-724a1ab56f0e)
+
+---
+
+A collaborative brainstorming application that transcribes spoken ideas, analyzes them for themes, and generates creative prompts to inspire further ideation which is all powered by the Granite-3.3-8B-Instruct model via the Watson X API.
 
 ## Features
 
